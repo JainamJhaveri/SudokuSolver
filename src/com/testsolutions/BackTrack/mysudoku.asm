@@ -131,7 +131,8 @@ code segment
 		push 35H						; num that we want to plac at row, col
 		call far ptr mPlace
 		pop dump						; popping the result so that stack remains empty and can be used for further ops
-		
+		pop dump
+		pop dump
 		
 		call far ptr mPrintNewLine
 		call far ptr mPrintSudoku		
