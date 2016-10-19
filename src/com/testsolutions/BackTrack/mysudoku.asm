@@ -10,10 +10,13 @@ data segment
 			db 30H,30H,30H,30H,30H,30H,30H,38H,30H,10
 			db 30H,30H,30H,30H,30H,30H,30H,30H,39H,10,'$'
 
-	inpmsg db "Input sudoku puzzle:", 10, '$'
-	outmsg db "Solution:", 10, '$'
+	msg_inpmsg db "Input sudoku puzzle:", 10, '$'
+	msg_out db "Solution:", 10, '$'
+	msg_true db 't','$'
+	msg_false db 'f','$'
 	newline db 10,'$'
 	dump dw 0	; temp variable used to store values from pop instruction
+	temp db 0
 data ends
 
 
@@ -22,6 +25,28 @@ mystack segment stack
 	tos label byte
 mystack ends
 
+
+push_all macro
+	pushF
+	push ax
+	push bx
+	push cx
+	push dx
+	push bp
+	push si
+	push di
+endm
+	
+pop_all macro
+	pop di
+	pop si
+	pop bp
+	pop dx
+	pop cx
+	pop bx
+	pop ax
+	popF
+endm
 
 procedures segment	
 	assume cs:procedures, ds:data, ss:mystack
@@ -50,34 +75,30 @@ procedures segment
 		mSolveSudoku endp
 	
 		
-		mPlace proc far			
-			pushF
-			push ax
-			push si
-			push bp
+		mPlace proc far									
+			push_all					; calling push macro
 			
 			mov bp, sp			
 			mov ax, 10					; constant 10 to be moved in ax										
 			
-			mul word ptr [bp + 16]		; multiplying row param passed in stack
-			add ax, [bp + 14]			; adding col param passed in stack
+			mul word ptr [bp + 24]		; (3rd param): multiplying 'row' param passed in stack
+			add ax, [bp + 22]			; (2nd param): adding 'col' param passed in stack
 			lea si, opBoard
 			add si, ax					; storing effective address in si where num is to be placed
 						
-			mov al, [bp + 12]			; al => num to be placed in opBoard array
+			mov al, [bp + 20]			; (1st param): al => 'num' param to be placed in opBoard array 
 			mov byte ptr [si], al		
 			
-			pop bp
-			pop si
-			pop ax
-			popF
+		
+			pop_all						; calling pop macro
+			
 			ret		
 		mPlace endp
 		
 		
 		
 		mIsSafeToPlace proc far
-
+		
 			ret				
 		mIsSafeToPlace endp
 		
@@ -89,7 +110,9 @@ procedures segment
 		
 		
 		mIsSafeInRow proc far
-
+			
+			
+			
 			ret				
 		mIsSafeInRow endp
 		
