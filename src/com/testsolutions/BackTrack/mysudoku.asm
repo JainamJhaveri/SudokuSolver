@@ -12,11 +12,11 @@ data segment
 
 	msg_inpmsg db "Input sudoku puzzle:", 10, '$'
 	msg_out db "Solution:", 10, '$'
-	msg_true db 't','$'
-	msg_false db 'f','$'
+	msg_true dw 't$'
+	msg_false dw 'f$'
 	newline db 10,'$'
-	dump dw 0	; temp variable used to store values from pop instruction
-	temp db 0
+	dump dw 0	; temp variable used to store unused values from pop instruction	
+	ans dw '0$'
 data ends
 
 
@@ -60,6 +60,15 @@ procedures segment
 		mPrintNewLine endp	
 	
 	
+		mPrintAns proc far		
+			lea dx, ans
+			mov ah, 09H
+			int 21H
+			
+			ret
+		mPrintAns endp	
+	
+	
 		mPrintSudoku proc far		
 			lea dx, opBoard	
 			mov ah, 09H
@@ -70,7 +79,9 @@ procedures segment
 	
 		
 		mSolveSudoku proc far
+			push_all					; calling push macro
 			
+			pop_all						; calling pop macro			
 			ret
 		mSolveSudoku endp
 	
@@ -90,41 +101,81 @@ procedures segment
 			mov byte ptr [si], al		
 			
 		
-			pop_all						; calling pop macro
-			
+			pop_all						; calling pop macro			
 			ret		
 		mPlace endp
 		
 		
 		
 		mIsSafeToPlace proc far
-		
+			push_all					; calling push macro
+			
+			
+			pop_all						; calling pop macro					
 			ret				
 		mIsSafeToPlace endp
 		
 		
 		mIsSafeInBox proc far
-
+			push_all					; calling push macro
+			
+			pop_all						; calling pop macro			
 			ret				
 		mIsSafeInBox endp
 		
 		
-		mIsSafeInRow proc far
+		
+		mIsSafeInRow proc far		
+			push_all					; calling push macro
 			
+			mov cx, 9
+			mov bp, sp					
+			mov ax, 10					; constant 10 to be moved in ax										
+			mul byte ptr [bp + 22]		; (2nd param): 'row' => multiplying row param passed in stack
+			mov bl, al					; storing value of al(base address of row) in bl for further references
+			mov bh, [bp + 20]			; (1st param): 'num' to be checked for given row
 			
+			again:
+				mov al, bl				; getting base address of row
+				add al, cl
+				lea si, opBoard
+				add si, ax				; storing effective address in si where num is to be placed
+				
+				cmp [si], bh
+				je unsafe				
+				
+				loop again
+
+			safe:
+				; store msg_true at location [bp + 20] which will be returned	--------------- need some help here ----------------
+				
+				jmp done
 			
+			unsafe:
+				; store msg_false at location [bp + 20] which will be returned	--------------- need some help here ----------------
+				
+				jmp done
+			
+			done:
+			
+			pop_all						; calling pop macro			
 			ret				
 		mIsSafeInRow endp
+				
 		
 		
 		mIsSafeInCol proc far
-
+			push_all					; calling push macro
+			
+			pop_all						; calling pop macro			
 			ret				
 		mIsSafeInCol endp
 		
 		
 		mFindUnAssignedSq proc far
-
+			push_all					; calling push macro
+			
+			pop_all						; calling pop macro			
 			ret				
 		mFindUnAssignedSq endp
 	
@@ -148,14 +199,24 @@ code segment
 		
 		call far ptr mPrintSudoku
 		
-		; row => 3 and col => 4 .. considering that indexing starts from 0,0		
-		push 3
-		push 4
-		push 35H						; num that we want to plac at row, col
+		; row => 5 and col => 6 .. considering that indexing starts from 0,0		
+		push 5
+		push 6
+		push 32H						; num that we want to plac at row, col
 		call far ptr mPlace
 		pop dump						; popping the result so that stack remains empty and can be used for further ops
 		pop dump
 		pop dump
+		
+		; row => 4, num => 35H(5)	.. answer will be returned on 2nd param 'num'
+		push 4			
+		push 35H
+		call far ptr mIsSafeInRow
+		pop ans							; storing return value from mIsSafeInRow here
+		pop dump
+				
+		call far ptr mPrintAns			; printing return value from mIsSafeInRow here
+		
 		
 		call far ptr mPrintNewLine
 		call far ptr mPrintSudoku		
