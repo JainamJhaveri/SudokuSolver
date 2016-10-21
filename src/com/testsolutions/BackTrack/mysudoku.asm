@@ -12,11 +12,11 @@ data segment
 
 	msg_inpmsg db "Input sudoku puzzle:", 10, '$'
 	msg_out db "Solution:", 10, '$'
-	msg_true dw 't$'
-	msg_false dw 'f$'
+	msg_true db 't', '$'
+	msg_false db 'f', '$'
 	newline db 10,'$'
 	dump dw 0	; temp variable used to store unused values from pop instruction	
-	ans dw '0$'
+	ans dw 'f', '$'
 data ends
 
 
@@ -148,11 +148,23 @@ procedures segment
 
 			safe:
 				; store msg_true at location [bp + 20] which will be returned	--------------- need some help here ----------------
+				lea si, msg_true
+				mov di, bp
+				add di, 20
+				mov ax, [si]					
+				mov [di], ax			; --------------- unable to do this ----------------
+				
 				
 				jmp done
 			
 			unsafe:
-				; store msg_false at location [bp + 20] which will be returned	--------------- need some help here ----------------
+				; store msg_false at location [bp + 20] which will be returned
+				lea si, msg_false
+				mov di, bp
+				add di, 20
+				mov ax, [si]
+				mov [di], ax			; --------------- unable to do this ----------------
+							
 				
 				jmp done
 			
@@ -197,20 +209,24 @@ code segment
 		mov ss, ax
 		lea sp, tos
 		
-		call far ptr mPrintSudoku
+		
+		; --------------- tested successfully from here ---------------  ;
+		;call far ptr mPrintSudoku
 		
 		; row => 5 and col => 6 .. considering that indexing starts from 0,0		
-		push 5
-		push 6
-		push 32H						; num that we want to plac at row, col
-		call far ptr mPlace
-		pop dump						; popping the result so that stack remains empty and can be used for further ops
-		pop dump
-		pop dump
+		;push 5
+		;push 6
+		;push 32H						; num that we want to plac at row, col
+		;call far ptr mPlace
+		;pop dump						; popping the result so that stack remains empty and can be used for further ops
+		;pop dump
+		;pop dump
+		
+		; --------------- tested successfully till here ---------------  ;
 		
 		; row => 4, num => 35H(5)	.. answer will be returned on 2nd param 'num'
 		push 4			
-		push 35H
+		push 38H
 		call far ptr mIsSafeInRow
 		pop ans							; storing return value from mIsSafeInRow here
 		pop dump
@@ -218,8 +234,12 @@ code segment
 		call far ptr mPrintAns			; printing return value from mIsSafeInRow here
 		
 		
-		call far ptr mPrintNewLine
-		call far ptr mPrintSudoku		
+		; --------------- tested successfully from here ---------------  ;
+		
+		;call far ptr mPrintNewLine
+		;call far ptr mPrintSudoku		
+		
+		; --------------- tested successfully till here ---------------  ;
 		call far ptr exit		
 			
 	
