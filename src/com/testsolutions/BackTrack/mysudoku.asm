@@ -135,40 +135,34 @@ procedures segment
 			mov bl, al					; storing value of al(base address of row) in bl for further references
 			mov bh, [bp + 20]			; (1st param): 'num' to be checked for given row
 			
-			again:
+			againRow:
 				mov al, bl				; getting base address of row
 				add al, cl
 				lea si, opBoard
-				add si, ax				; storing effective address in si where num is to be placed
+				add si, ax				; storing effective address in si where num is to be checked
 				
 				cmp [si], bh
-				je unsafe				
+				je unsafeRow
 				
-				loop again
+				loop againRow
 
-			safe:
+			safeRow:
 				; store msg_true at location [bp + 20] which will be returned	--------------- need some help here ----------------
 				lea si, msg_true
-				mov di, bp
-				add di, 20
-				mov ax, [si]					
-				mov [di], ax			; --------------- unable to do this ----------------
+				mov ax, [si]
+				mov [bp+20], ax			; --------------- unable to do this ----------------				
 				
-				
-				jmp done
+				jmp doneRow
 			
-			unsafe:
+			unsafeRow:
 				; store msg_false at location [bp + 20] which will be returned
 				lea si, msg_false
-				mov di, bp
-				add di, 20
 				mov ax, [si]
-				mov [di], ax			; --------------- unable to do this ----------------
-							
-				
-				jmp done
+				mov [bp+20], ax			; --------------- unable to do this ----------------
+											
+				jmp doneRow
 			
-			done:
+			doneRow:
 			
 			pop_all						; calling pop macro			
 			ret				
@@ -179,6 +173,42 @@ procedures segment
 		mIsSafeInCol proc far
 			push_all					; calling push macro
 			
+			mov cx, 9
+			mov bp, sp					
+			mov bl, byte ptr [bp + 22]	; (2nd param): 'col' => storing param in bl
+			mov bh, [bp + 20]			; (1st param): 'num' to be checked for given col
+			
+			againCol:
+				mov ax, 10					; constant 10 to be moved in ax																				
+				mul cl
+				add al, bl
+
+				lea si, opBoard
+				add si, ax				; storing effective address in si where num is to be checked
+				
+				cmp [si], bh
+				je unsafeCol
+				
+				loop againCol
+
+			safeCol:
+				; store msg_true at location [bp + 20] which will be returned	--------------- need some help here ----------------
+				lea si, msg_true
+				mov ax, [si]
+				mov [bp+20], ax			; --------------- unable to do this ----------------				
+				
+				jmp doneCol
+			
+			unsafeCol:
+				; store msg_false at location [bp + 20] which will be returned
+				lea si, msg_false
+				mov ax, [si]
+				mov [bp+20], ax			; --------------- unable to do this ----------------											
+											
+				jmp doneCol
+			
+			doneCol:
+					
 			pop_all						; calling pop macro			
 			ret				
 		mIsSafeInCol endp
@@ -209,8 +239,8 @@ code segment
 		mov ss, ax
 		lea sp, tos
 		
-		
 		; --------------- tested successfully from here ---------------  ;
+		
 		;call far ptr mPrintSudoku
 		
 		; row => 5 and col => 6 .. considering that indexing starts from 0,0		
@@ -221,10 +251,9 @@ code segment
 		;pop dump						; popping the result so that stack remains empty and can be used for further ops
 		;pop dump
 		;pop dump
+				
 		
-		; --------------- tested successfully till here ---------------  ;
-		
-		; row => 4, num => 35H(5)	.. answer will be returned on 2nd param 'num'
+		; row => 4, num => 38H(8)	.. answer will be returned on 2nd param 'num'
 		push 4			
 		push 38H
 		call far ptr mIsSafeInRow
@@ -232,9 +261,16 @@ code segment
 		pop dump
 				
 		call far ptr mPrintAns			; printing return value from mIsSafeInRow here
-		
-		
-		; --------------- tested successfully from here ---------------  ;
+				
+		; col => 2, num => 35H(5)	.. answer will be returned on 2nd param 'num'
+		push 1
+		push 32H
+		call far ptr mIsSafeInCol
+		pop ans							; storing return value from mIsSafeInRow here
+		pop dump
+				
+		call far ptr mPrintAns			; printing return value from mIsSafeInRow here
+					
 		
 		;call far ptr mPrintNewLine
 		;call far ptr mPrintSudoku		
@@ -244,4 +280,4 @@ code segment
 			
 	
 code ends
-	end start
+	end start	
