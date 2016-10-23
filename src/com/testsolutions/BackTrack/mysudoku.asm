@@ -93,8 +93,10 @@ procedures segment
 			pop	unAssignedRow
 			pop	unAssignedCol
 			
-			cmp unAssignedCol, 11
-			je returnTrue
+			cmp unAssignedCol, 11			
+			jne useless1
+			jmp returnTrue
+			useless1:
 			
 			mov cx, 9
 			mov testnum, 30H
@@ -147,8 +149,12 @@ procedures segment
 					pop dump
 															
 				noDontPlaceIt:
-							
-			loop again
+			
+				dec cx
+				cmp cx, 0
+				je returnTrue
+			jmp again
+				
 			
 			returnTrue:
 				; store msg_true at location [bp + 20] which will be returned	
