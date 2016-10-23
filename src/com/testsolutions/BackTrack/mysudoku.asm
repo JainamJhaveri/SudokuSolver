@@ -119,6 +119,62 @@ procedures segment
 		mIsSafeInBox proc far
 			push_all					; calling push macro
 			
+			mov cl, 3					
+			mov bp, sp
+			
+			mov ax, [bp + 24]			; (1st param): 'row'
+			div cl						; al/cl => al : quotient, ah : remainder
+			mov al, [bp + 24]
+			sub al, ah
+			mov bl, al					; storing 'startRow' in bl ... it will be in multiple of 3
+			
+			mov ax, [bp + 22]			; (2nd param): 'col'
+			div cl						; al/cl => al : quotient, ah : remainder
+			mov al, [bp + 22]
+			sub al, ah
+			mov bh, al					; storing 'startCol' in bh ... it will be in multiple of 3
+
+			add bl, 2 					; storing endRow in bl
+			add bh, 2					; storing endCol in bh
+			
+			mov cl, 3					; cl used for row iteration count
+			outerBox:				
+				mov ax, 10								
+				mul bl
+				add al, bh
+				
+				mov ch, 3					; ch used for col iteration count
+				innerBox:
+					lea si, opBoard
+					add si, ax
+					mov dl, [bp + 20]
+					cmp [si], dl
+					je unsafeBox
+					
+					dec al
+					dec ch
+					jnz innerBox
+			
+				dec bl
+				dec cl
+				jnz outerBox
+
+			safeBox: 
+				; store msg_true at location [bp + 20] which will be returned	
+				lea si, msg_true
+				mov ax, [si]
+				mov [bp + 20], ax							
+				
+				jmp doneBox
+			unsafeBox:
+				; store msg_true at location [bp + 20] which will be returned	
+				lea si, msg_false
+				mov ax, [si]
+				mov [bp + 20], ax
+				
+				jmp doneBox
+			
+			doneBox:			
 			pop_all						; calling pop macro			
 			ret				
 		mIsSafeInBox endp
@@ -147,10 +203,10 @@ procedures segment
 				loop againRow
 
 			safeRow:
-				; store msg_true at location [bp + 20] which will be returned	--------------- need some help here ----------------
+				; store msg_true at location [bp + 20] which will be returned	
 				lea si, msg_true
 				mov ax, [si]
-				mov [bp+20], ax			; --------------- unable to do this ----------------				
+				mov [bp + 20], ax							
 				
 				jmp doneRow
 			
@@ -158,7 +214,7 @@ procedures segment
 				; store msg_false at location [bp + 20] which will be returned
 				lea si, msg_false
 				mov ax, [si]
-				mov [bp+20], ax			; --------------- unable to do this ----------------
+				mov [bp + 20], ax			
 											
 				jmp doneRow
 			
@@ -192,10 +248,10 @@ procedures segment
 				loop againCol
 
 			safeCol:
-				; store msg_true at location [bp + 20] which will be returned	--------------- need some help here ----------------
+				; store msg_true at location [bp + 20] which will be returned	
 				lea si, msg_true
 				mov ax, [si]
-				mov [bp+20], ax			; --------------- unable to do this ----------------				
+				mov [bp + 20], ax							
 				
 				jmp doneCol
 			
@@ -203,7 +259,7 @@ procedures segment
 				; store msg_false at location [bp + 20] which will be returned
 				lea si, msg_false
 				mov ax, [si]
-				mov [bp+20], ax			; --------------- unable to do this ----------------											
+				mov [bp + 20], ax														
 											
 				jmp doneCol
 			
@@ -243,7 +299,7 @@ code segment
 		
 		;call far ptr mPrintSudoku
 		
-		; row => 5 and col => 6 .. considering that indexing starts from 0,0		
+		; row => 5, col => 6, num => 32H(2) .. considering that indexing starts from 0,0		
 		;push 5
 		;push 6
 		;push 32H						; num that we want to plac at row, col
@@ -253,24 +309,35 @@ code segment
 		;pop dump
 				
 		
-		; row => 4, num => 38H(8)	.. answer will be returned on 2nd param 'num'
-		push 4			
-		push 38H
-		call far ptr mIsSafeInRow
-		pop ans							; storing return value from mIsSafeInRow here
+		; row => 4, num => 38H(8)	.. answer will be returned on 1st param 'num'
+		;push 4			
+		;push 38H
+		;call far ptr mIsSafeInRow
+		;pop ans							; storing return value from mIsSafeInRow here
+		;pop dump
+				
+		;call far ptr mPrintAns			; printing return value from mIsSafeInRow here
+				
+		; col => 1, num => 32H(2)	.. answer will be returned on 1st param 'num'
+		;push 1
+		;push 32H
+		;call far ptr mIsSafeInCol
+		;pop ans							; storing return value from mIsSafeInCol here
+		;pop dump
+				
+		;call far ptr mPrintAns			; printing return value from mIsSafeInRow here		
+		
+		
+		; row => 4, col => 7, num => 34H(4)	.. answer will be returned on 1st param 'num'
+		push 3
+		push 6
+		push 34H
+		call far ptr mIsSafeInBox
+		pop ans							; storing return value from mIsSafeInBox here
 		pop dump
-				
+		pop dump		
+		
 		call far ptr mPrintAns			; printing return value from mIsSafeInRow here
-				
-		; col => 2, num => 35H(5)	.. answer will be returned on 2nd param 'num'
-		push 1
-		push 32H
-		call far ptr mIsSafeInCol
-		pop ans							; storing return value from mIsSafeInRow here
-		pop dump
-				
-		call far ptr mPrintAns			; printing return value from mIsSafeInRow here
-					
 		
 		;call far ptr mPrintNewLine
 		;call far ptr mPrintSudoku		
