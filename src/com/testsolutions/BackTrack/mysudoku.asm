@@ -24,7 +24,7 @@ data ends
 
 
 mystack segment stack
-	db 200 dup(0)
+	db 500 dup('$$$$$$')
 	tos label byte
 mystack ends
 
@@ -87,12 +87,15 @@ procedures segment
 			
 			mov bp, sp
 			
-			push 11
-			push 11
-				call mFindUnAssignedSq
+			mov dx, 11
+			push dx
+			push dx				
+				call mFindUnAssignedSq	; finding an unassigned square
 			pop	unAssignedRow
 			pop	unAssignedCol
+						
 			
+			; if an unassigned square is not found, return success
 			cmp unAssignedCol, 11			
 			jne useless1
 			jmp returnTrue
@@ -108,7 +111,7 @@ procedures segment
 				push unAssignedRow
 				push unAssignedCol
 				push testnum
-					call mIsSafeToPlace
+				;	call mIsSafeToPlace
 				pop ans
 				pop dump
 				pop dump
@@ -124,14 +127,16 @@ procedures segment
 					push unAssignedRow
 					push unAssignedCol
 					push testnum 					; num that we want to plac at row, col
-						call far ptr mPlace
+						call mPlace
 					pop dump						; popping the result so that stack remains empty and can be used for further ops
 					pop dump
 					pop dump
 					
 					; recursively call mSolveSudoku
 					push ans
-						call mSolveSudoku
+						call mPrintSudoku
+						call far ptr mPrintNewLine
+						call mSolveSudoku						
 					pop ans
 
 					mov bx, ans               	; storing the ans for further reference            
@@ -194,14 +199,14 @@ procedures segment
 		mPlace endp
 		
 
-        mIsSafeToPlace proc near
+        mIsSafeToPlace proc far
             push_all                    ; calling push macro
             
 			mov bp, sp            
             
 			; Checking for row			
             push [bp + 22] 				; loading the 3rd param : row
-            push [bp + 18]	          	; loading the 1st param : num 
+            push [bp + 20]	          	; loading the 1st param : num 
 				call mIsSafeInRow                        
             pop ans                   	; storing return value from mIsSafeInRow here
 			pop dump
@@ -217,8 +222,8 @@ procedures segment
             
             ; Now, checking for column
             
-            push [bp + 20] 	          	; loading the 2nd param : col 
-            push [bp + 18] 	          	; loading the 1st param : num 
+            push [bp + 22] 	          	; loading the 2nd param : col 
+            push [bp + 20] 	          	; loading the 1st param : num 
 				call mIsSafeInCol            
             pop ans                   	; storing return value from mIsSafeInCol here
 			pop dump			
@@ -232,10 +237,10 @@ procedures segment
             
             equal2:				
              
-			;Now, checking for box
-            push [bp + 22]	          	; loading the 3rd param : row
-            push [bp + 20]	          	; loading the 2nd param : col 
-            push [bp + 18]	          	; loading the 1st param : num 
+			; Now, checking for box
+            push [bp + 24]	          	; loading the 3rd param : row
+            push [bp + 22]	          	; loading the 2nd param : col 
+            push [bp + 20]	          	; loading the 1st param : num 
 				call mIsSafeInBox            
             pop ans                   	; storing return value from mIsSafeInBox here
 			pop dump
@@ -257,26 +262,28 @@ procedures segment
             
             moveon:
 				mov ax, [si]
-				mov [bp + 18], ax            
+				mov [bp + 20], ax            
             
             pop_all                     ; calling pop macro                 
             ret             
         mIsSafeToPlace endp	
+
 		
 		
 		mIsSafeInBox proc near
 			push_all					; calling push macro
 			
-			mov cl, 3					
+			mov cl, 3					; cl used for row iteration count and div instruction
 			mov bp, sp
+			mov dl, [bp + 18]			; loading the 1st param : num
 			
-			mov ax, [bp + 22]			; (1st param): 'row'
+			mov ax, [bp + 22]			; loading the 3rd param : row
 			div cl						; al/cl => al : quotient, ah : remainder
 			mov al, [bp + 22]
 			sub al, ah
 			mov bl, al					; storing 'startRow' in bl ... it will be in multiple of 3
 			
-			mov ax, [bp + 20]			; (2nd param): 'col'
+			mov ax, [bp + 20]			; loading the 2nd param : col
 			div cl						; al/cl => al : quotient, ah : remainder
 			mov al, [bp + 20]
 			sub al, ah
@@ -285,7 +292,8 @@ procedures segment
 			add bl, 2 					; storing endRow in bl
 			add bh, 2					; storing endCol in bh
 			
-			mov cl, 3					; cl used for row iteration count
+			
+			
 			outerBox:				
 				mov ax, 10								
 				mul bl
@@ -294,8 +302,7 @@ procedures segment
 				mov ch, 3					; ch used for col iteration count
 				innerBox:
 					lea si, opBoard
-					add si, ax
-					mov dl, [bp + 18]
+					add si, ax					
 					cmp [si], dl
 					je unsafeBox
 					
@@ -325,26 +332,28 @@ procedures segment
 		mIsSafeInBox endp
 		
 				
-		mIsSafeInRow proc near		
-			push_all					; calling push macro
+		mIsSafeInRow proc near
+			push_all					; calling push macro			
 			
-			mov cx, 9
-			mov bp, sp					
+			mov bp, sp			
+			lea si, opBoard			
+			
 			mov ax, 10					; constant 10 to be moved in ax										
 			mul byte ptr [bp + 20]		; (2nd param): 'row' => multiplying row param passed in stack
-			mov bl, al					; storing value of al(base address of row) in bl for further references
+			add si, ax
 			mov bh, [bp + 18]			; (1st param): 'num' to be checked for given row
 			
+			mov cx, 0
 			againRow:
-				mov al, bl				; getting base address of row
-				add al, cl
-				lea si, opBoard
-				add si, ax				; storing effective address in si where num is to be checked
+				cmp cx, 9
+				je safeRow
 				
 				cmp [si], bh
 				je unsafeRow
 				
-				loop againRow
+				inc si				
+				inc cx												
+				jmp againRow
 
 			safeRow:
 				; store msg_true at location [bp + 18] which will be returned	
@@ -366,24 +375,25 @@ procedures segment
 				
 		mIsSafeInCol proc near
 			push_all					; calling push macro
-			
-			mov cx, 9
+						
 			mov bp, sp					
-			mov bl, byte ptr [bp + 20]	; (2nd param): 'col' => storing param in bl
+			lea si, opBoard			
+			mov bx, [bp + 20]			; (2nd param): 'col' => storing param in bx					
+			add si, bx					; initial col address stored in si			
 			mov bh, [bp + 18]			; (1st param): 'num' to be checked for given col
 			
+			mov ax, 10
+			mov cx, 0			
 			againCol:
-				mov ax, 10					; constant 10 to be moved in ax																				
-				mul cl
-				add al, bl
-
-				lea si, opBoard
-				add si, ax				; storing effective address in si where num is to be checked
+				cmp cx, 9
+				je safeCol
 				
 				cmp [si], bh
 				je unsafeCol
 				
-				loop againCol
+				add si, ax				; storing effective address in si where num is to be checked											
+				inc cx
+				jmp againCol
 
 			safeCol:
 				; store msg_true at location [bp + 18] which will be returned	
@@ -406,8 +416,37 @@ procedures segment
 		mFindUnAssignedSq proc near
 			push_all					; calling push macro
 			
+			mov bx, 0					; clear bx
+			lea si, opBoard
+			
+			outerL:
+				cmp bh, 9
+				je sqNotFound
+				mov bl, 0
+				innerL:
+					cmp byte ptr [si], 30H
+					je sqFound
+					inc si
+					inc bl
+					cmp bl, 9
+					je newRow
+					jmp innerL
+			
+				newRow:
+					inc bh
+					jmp outerL
+
+			sqFound:
+				mov bp, sp
+				mov [bp + 20], bl	;pushes col
+				mov [bp + 18], bh	;pushes row
+				;push bl			;pushes col
+				;push bh			;pushes row
+
+			sqNotFound:
+			
 			pop_all						; calling pop macro			
-			ret				
+			ret					
 		mFindUnAssignedSq endp
 	
 		exit proc far	
@@ -429,18 +468,17 @@ code segment
 		lea sp, tos
 				
 						
-		; row => 4, col => 7, num => 34H(4)	.. answer will be returned on 1st param 'num'
-		;push 4
-		;push 7
-		;push 34H
-		;	call far ptr mIsSafeToPlace
-		;pop ans							; storing return value from mIsSafeInBox here
-		;pop dump
-		;pop dump		
+		; row => 0, col => 1, num => 39H(9)	.. answer will be returned on 1st param 'num'
+		push 4
+		push 5
+		push 34H
+			call far ptr mIsSafeToPlace
+		pop ans							; storing return value from mIsSafeToPlace here
+		pop dump
+		pop dump		
 		
-		call far ptr mSolveSudoku
-		
-		call far ptr mPrintAns			; printing return value from mIsSafeInRow here					
+		;call far ptr mSolveSudoku		
+		call far ptr mPrintAns
 		call far ptr mPrintNewLine
 		call far ptr mPrintSudoku		
 		
