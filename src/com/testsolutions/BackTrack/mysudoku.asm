@@ -80,13 +80,11 @@ procedures segment
 			ret
 		mPrintSudoku endp	
 	
-		
-		
+				
 		mSolveSudoku proc far
 			push_all					; calling push macro
 			
-			mov bp, sp
-			
+			mov bp, sp			
 			mov dx, 11
 			push dx
 			push dx				
@@ -111,7 +109,7 @@ procedures segment
 				push unAssignedRow
 				push unAssignedCol
 				push testnum
-				;	call mIsSafeToPlace
+					call mIsSafeToPlace
 				pop ans
 				pop dump
 				pop dump
@@ -199,14 +197,14 @@ procedures segment
 		mPlace endp
 		
 
-        mIsSafeToPlace proc far
+        mIsSafeToPlace proc near
             push_all                    ; calling push macro
             
 			mov bp, sp            
             
 			; Checking for row			
-            push [bp + 24] 				; loading the 3rd param : row
-            push [bp + 20]	          	; loading the 1st param : num 
+            push [bp + 22] 				; loading the 3rd param : row
+            push [bp + 18]	          	; loading the 1st param : num 
 				call mIsSafeInRow                        
             pop ans                   	; storing return value from mIsSafeInRow here
 			pop dump
@@ -224,8 +222,8 @@ procedures segment
             
             ; Now, checking for column
             
-            push [bp + 22] 	          	; loading the 2nd param : col 
-            push [bp + 20] 	          	; loading the 1st param : num 
+            push [bp + 20] 	          	; loading the 2nd param : col 
+            push [bp + 18] 	          	; loading the 1st param : num 
 				call mIsSafeInCol            
             pop ans                   	; storing return value from mIsSafeInCol here
 			pop dump			
@@ -242,9 +240,9 @@ procedures segment
             equal2:				
              
 			; Now, checking for box
-            push [bp + 24]	          	; loading the 3rd param : row
-            push [bp + 22]	          	; loading the 2nd param : col 
-            push [bp + 20]	          	; loading the 1st param : num 
+            push [bp + 22]	          	; loading the 3rd param : row
+            push [bp + 20]	          	; loading the 2nd param : col 
+            push [bp + 18]	          	; loading the 1st param : num 
 				call mIsSafeInBox            
             pop ans                   	; storing return value from mIsSafeInBox here
 			pop dump
@@ -268,7 +266,7 @@ procedures segment
             
             moveon:
 				mov ax, [si]
-				mov [bp + 20], ax            
+				mov [bp + 18], ax            
             
             pop_all                     ; calling pop macro                 
             ret             
@@ -480,18 +478,8 @@ code segment
 		mov ax, mystack
 		mov ss, ax
 		lea sp, tos
-				
-						
-		; row => 0, col => 1, num => 39H(9)	.. answer will be returned on 1st param 'num'
-		push 7
-		push 0
-		push 39H
-			call far ptr mIsSafeToPlace
-		pop ans							; storing return value from mIsSafeToPlace here
-		pop dump
-		pop dump		
-		
-		;call far ptr mSolveSudoku		
+												
+		call far ptr mSolveSudoku
 		call far ptr mPrintAns
 		call far ptr mPrintNewLine
 		call far ptr mPrintSudoku		
