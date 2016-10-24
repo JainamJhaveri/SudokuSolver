@@ -288,31 +288,40 @@ procedures segment
 			mov al, [bp + 20]
 			sub al, ah
 			mov bh, al					; storing 'startCol' in bh ... it will be in multiple of 3
+					
 
-			add bl, 2 					; storing endRow in bl
-			add bh, 2					; storing endCol in bh
+			lea si, opBoard
+			mov ax, 10								
+			mul bl
+			add al, bh
+			add si, ax						; getting initial address on opBoard
 			
 			
-			
+			mov cl, 0						; cl used for row iteration count
 			outerBox:				
-				mov ax, 10								
-				mul bl
-				add al, bh
-				
-				mov ch, 3					; ch used for col iteration count
+				cmp cl, 3
+				je safeBox
+												
+				mov ch, 0					; ch used for col iteration count
 				innerBox:
-					lea si, opBoard
-					add si, ax					
+					cmp ch, 3
+					je nextBoxRow
+					
 					cmp [si], dl
 					je unsafeBox
 					
-					dec al
-					dec ch
-					jnz innerBox
+					inc si
+					inc ch
+					jmp innerBox
+				
+				nextBoxRow:
+					add si, 8				; si will point to elem below 'startRow','startCol'
+					inc cl					
+					jmp outerBox
 			
 				dec bl
 				dec cl
-				jnz outerBox
+				jnz outerBox									
 
 			safeBox: 
 				; store msg_true at location [bp + 18] which will be returned	
@@ -470,7 +479,7 @@ code segment
 						
 		; row => 0, col => 1, num => 39H(9)	.. answer will be returned on 1st param 'num'
 		push 4
-		push 5
+		push 6
 		push 34H
 			call far ptr mIsSafeToPlace
 		pop ans							; storing return value from mIsSafeToPlace here
