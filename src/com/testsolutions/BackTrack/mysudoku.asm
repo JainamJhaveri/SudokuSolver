@@ -205,11 +205,13 @@ procedures segment
 			mov bp, sp            
             
 			; Checking for row			
-            push [bp + 22] 				; loading the 3rd param : row
+            push [bp + 24] 				; loading the 3rd param : row
             push [bp + 20]	          	; loading the 1st param : num 
 				call mIsSafeInRow                        
             pop ans                   	; storing return value from mIsSafeInRow here
 			pop dump
+			
+			;call mPrintAns
 			
             mov bx, ans               	; storing the ans for further reference                                             
             mov ah, msg_true
@@ -228,6 +230,8 @@ procedures segment
             pop ans                   	; storing return value from mIsSafeInCol here
 			pop dump			
 			
+			;call mPrintAns
+			
             mov bx, ans               	; storing the ans for further reference            
             mov ah, msg_true
             cmp ah, bl                	; $ is stored in bh and msg is stored in bl            
@@ -245,6 +249,8 @@ procedures segment
             pop ans                   	; storing return value from mIsSafeInBox here
 			pop dump
             pop dump
+			
+			;call mPrintAns
 			
             mov bx, ans               	; storing the ans for further reference            
             mov ah, msg_true
@@ -267,79 +273,7 @@ procedures segment
             pop_all                     ; calling pop macro                 
             ret             
         mIsSafeToPlace endp	
-
-		
-		
-		mIsSafeInBox proc near
-			push_all					; calling push macro
 			
-			mov cl, 3					; cl used for row iteration count and div instruction
-			mov bp, sp
-			mov dl, [bp + 18]			; loading the 1st param : num
-			
-			mov ax, [bp + 22]			; loading the 3rd param : row
-			div cl						; al/cl => al : quotient, ah : remainder
-			mov al, [bp + 22]
-			sub al, ah
-			mov bl, al					; storing 'startRow' in bl ... it will be in multiple of 3
-			
-			mov ax, [bp + 20]			; loading the 2nd param : col
-			div cl						; al/cl => al : quotient, ah : remainder
-			mov al, [bp + 20]
-			sub al, ah
-			mov bh, al					; storing 'startCol' in bh ... it will be in multiple of 3
-					
-
-			lea si, opBoard
-			mov ax, 10								
-			mul bl
-			add al, bh
-			add si, ax						; getting initial address on opBoard
-			
-			
-			mov cl, 0						; cl used for row iteration count
-			outerBox:				
-				cmp cl, 3
-				je safeBox
-												
-				mov ch, 0					; ch used for col iteration count
-				innerBox:
-					cmp ch, 3
-					je nextBoxRow
-					
-					cmp [si], dl
-					je unsafeBox
-					
-					inc si
-					inc ch
-					jmp innerBox
-				
-				nextBoxRow:
-					add si, 8				; si will point to elem below 'startRow','startCol'
-					inc cl					
-					jmp outerBox
-			
-				dec bl
-				dec cl
-				jnz outerBox									
-
-			safeBox: 
-				; store msg_true at location [bp + 18] which will be returned	
-				lea si, msg_true				
-				jmp doneBox
-				
-			unsafeBox:
-				; store msg_true at location [bp + 18] which will be returned	
-				lea si, msg_false
-
-			
-			doneBox:			
-				mov ax, [si]
-				mov [bp + 18], ax
-			pop_all						; calling pop macro			
-			ret				
-		mIsSafeInBox endp
-		
 				
 		mIsSafeInRow proc near
 			push_all					; calling push macro			
@@ -420,8 +354,79 @@ procedures segment
 			pop_all						; calling pop macro			
 			ret				
 		mIsSafeInCol endp
+				
 		
+		mIsSafeInBox proc near
+			push_all					; calling push macro
+			
+			mov cl, 3					; cl used for row iteration count and div instruction
+			mov bp, sp
+			mov dl, [bp + 18]			; loading the 1st param : num
+			
+			mov ax, [bp + 22]			; loading the 3rd param : row
+			div cl						; al/cl => al : quotient, ah : remainder
+			mov al, [bp + 22]
+			sub al, ah
+			mov bl, al					; storing 'startRow' in bl ... it will be in multiple of 3
+			
+			mov ax, [bp + 20]			; loading the 2nd param : col
+			div cl						; al/cl => al : quotient, ah : remainder
+			mov al, [bp + 20]
+			sub al, ah
+			mov bh, al					; storing 'startCol' in bh ... it will be in multiple of 3
+					
+
+			lea si, opBoard
+			mov ax, 10								
+			mul bl
+			add al, bh
+			add si, ax						; getting initial address on opBoard
+			
+			
+			mov cl, 0						; cl used for row iteration count
+			outerBox:				
+				cmp cl, 3
+				je safeBox
+												
+				mov ch, 0					; ch used for col iteration count
+				innerBox:
+					cmp ch, 3
+					je nextBoxRow
+					
+					cmp [si], dl
+					je unsafeBox
+					
+					inc si
+					inc ch
+					jmp innerBox
+				
+				nextBoxRow:
+					add si, 8				; si will point to elem below 'startRow','startCol'
+					inc cl					
+					jmp outerBox
+			
+				dec bl
+				dec cl
+				jnz outerBox									
+
+			safeBox: 
+				; store msg_true at location [bp + 18] which will be returned	
+				lea si, msg_true				
+				jmp doneBox
+				
+			unsafeBox:
+				; store msg_true at location [bp + 18] which will be returned	
+				lea si, msg_false
+
+			
+			doneBox:			
+				mov ax, [si]
+				mov [bp + 18], ax
+			pop_all						; calling pop macro			
+			ret				
+		mIsSafeInBox endp
 		
+				
 		mFindUnAssignedSq proc near
 			push_all					; calling push macro
 			
@@ -478,9 +483,9 @@ code segment
 				
 						
 		; row => 0, col => 1, num => 39H(9)	.. answer will be returned on 1st param 'num'
-		push 4
-		push 6
-		push 34H
+		push 7
+		push 0
+		push 39H
 			call far ptr mIsSafeToPlace
 		pop ans							; storing return value from mIsSafeToPlace here
 		pop dump
