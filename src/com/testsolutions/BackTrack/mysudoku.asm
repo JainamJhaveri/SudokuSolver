@@ -1,7 +1,7 @@
 data segment	
 	
-	opBoard	db 31H,30H,30H,30H,30H,30H,30H,30H,30H,10
-			db 30H,32H,30H,30H,30H,30H,30H,30H,30H,10
+	opBoard	db 31H,34H,35H,32H,33H,37H,36H,39H,38H,10
+			db 36H,32H,37H,31H,30H,30H,30H,30H,30H,10
 			db 30H,30H,33H,30H,30H,30H,30H,30H,30H,10
 			db 30H,30H,30H,34H,30H,30H,30H,30H,30H,10
 			db 30H,30H,30H,30H,35H,30H,30H,30H,30H,10
@@ -55,28 +55,37 @@ procedures segment
 	assume cs:procedures, ds:data, ss:mystack
 	
 		mPrintNewLine proc far		
+			push_all					; calling push macro
+			
 			lea dx, newline	
 			mov ah, 09H
 			int 21H
 			
+			pop_all						; calling pop macro			
 			ret
 		mPrintNewLine endp	
 	
 	
 		mPrintAns proc far		
+			push_all					; calling push macro
+			
 			lea dx, ans
 			mov ah, 09H
 			int 21H
 			
+			pop_all						; calling pop macro									
 			ret
 		mPrintAns endp	
 	
 	
 		mPrintSudoku proc far		
+			push_all					; calling push macro
+			
 			lea dx, opBoard	
 			mov ah, 09H
 			int 21H
 			
+			pop_all						; calling pop macro						
 			ret
 		mPrintSudoku endp	
 	
@@ -88,10 +97,11 @@ procedures segment
 			mov dx, 11
 			push dx
 			push dx				
-				call mFindUnAssignedSq	; finding an unassigned square
+				call mFindUnAssignedSq	; finding an unassigned square				
 			pop	unAssignedRow
 			pop	unAssignedCol
 						
+			;call far ptr exit
 			
 			; if an unassigned square is not found, return success
 			cmp unAssignedCol, 11			
@@ -99,7 +109,7 @@ procedures segment
 			jmp returnTrue
 			useless1:
 			
-			mov cx, 9
+			;mov cx, 9
 			mov testnum, 30H
 			
 			again: 
@@ -132,9 +142,9 @@ procedures segment
 					
 					; recursively call mSolveSudoku
 					push ans
-						call mPrintSudoku
+						call far ptr mPrintSudoku
 						call far ptr mPrintNewLine
-						call mSolveSudoku						
+						call far ptr mSolveSudoku						
 					pop ans
 
 					mov bx, ans               	; storing the ans for further reference            
@@ -142,6 +152,28 @@ procedures segment
 					cmp ah, bl                	; $ is stored in bh and msg is stored in bl            								
 					je returnTrue
 					
+					;You come here on backtracking
+					;Update unassigned square to -1 of current position in unAssignedRow and unAssignedCol
+					cmp unAssignedCol, 0
+					je decRow
+					dec unAssignedCol
+					jmp sqUpdated
+					decRow:
+						cmp unAssignedRow, 0
+						je myerror
+						dec unAssignedRow
+						mov unAssignedCol, 8
+					sqUpdated:
+						push_all
+							;lea si, opBoard						
+							;mov ax, 10
+							;mul unAssignedRow
+							;add ax, unAssignedCol
+							;add si, ax
+							;mov ax, [si]
+							;mov testnum, ax
+						pop_all
+						
 					; unplace the number
 					push unAssignedRow
 					push unAssignedCol
@@ -150,20 +182,22 @@ procedures segment
 					pop dump						; popping the result so that stack remains empty and can be used for further ops
 					pop dump
 					pop dump
+					
+					call far ptr mPrintSudoku
 															
 				noDontPlaceIt:
 			
-				dec cx
-				cmp cx, 0
-				je returnTrue
+				;dec cx
+				;cmp cx, 0
+				cmp testnum, 39H
+				je returnFalse
 			jmp again
 				
-			
 			returnTrue:
 				; store msg_true at location [bp + 20] which will be returned	
-				lea si, msg_true
+				lea si, msg_true			
 				jmp done
-			
+				
 			returnFalse:
 				; store msg_false at location [bp + 20] which will be returned	
 				lea si, msg_false										
@@ -174,6 +208,9 @@ procedures segment
 
 			pop_all						; calling pop macro			
 			ret
+			
+			myerror:
+				call far ptr exit
 		mSolveSudoku endp
 		
 		
@@ -446,6 +483,7 @@ procedures segment
 			
 				newRow:
 					inc bh
+					inc si
 					jmp outerL
 
 			sqFound:
@@ -479,6 +517,7 @@ code segment
 		mov ss, ax
 		lea sp, tos
 												
+		;call far ptr mFindUnAssignedSq
 		call far ptr mSolveSudoku
 		call far ptr mPrintAns
 		call far ptr mPrintNewLine
