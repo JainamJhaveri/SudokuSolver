@@ -24,7 +24,7 @@ data ends
 
 
 mystack segment stack
-	db 500 dup('$$$$$$')
+	db 500 dup('$')
 	tos label byte
 mystack ends
 
@@ -90,7 +90,7 @@ procedures segment
 		mPrintSudoku endp	
 	
 				
-		mSolveSudoku proc far
+		mSolveSudoku proc near
 			push_all					; calling push macro
 			
 			mov bp, sp			
@@ -100,17 +100,17 @@ procedures segment
 				call mFindUnAssignedSq	; finding an unassigned square				
 			pop	unAssignedRow
 			pop	unAssignedCol
-						
+									
 			;call far ptr exit
 			
 			; if an unassigned square is not found, return success
-			cmp unAssignedCol, 11			
+			cmp unAssignedCol, dx
 			jne useless1
 			jmp returnTrue
 			useless1:
 			
-			;mov cx, 9
 			mov testnum, 30H
+			mov dh, msg_true			
 			
 			again: 
 				; place a testnum from 31H(1) to 39H(9) in the opBoard if it is safe to place 
@@ -125,8 +125,7 @@ procedures segment
 				pop dump
 				
 				mov bx, ans               	; storing the ans for further reference            
-				mov ah, msg_true
-				cmp ah, bl                	; $ is stored in bh and msg is stored in bl            								
+				cmp dh, bl                	; $ is stored in bh and msg is stored in bl            								
 				je yesPlaceIt
 				jmp noDontPlaceIt
 				
@@ -141,38 +140,21 @@ procedures segment
 					pop dump
 					
 					; recursively call mSolveSudoku
-					push ans
-						call far ptr mPrintSudoku
-						call far ptr mPrintNewLine
-						call far ptr mSolveSudoku						
-					pop ans
-
+					push unAssignedRow
+					push unAssignedCol
+					push testnum
+						push ans
+							call far ptr mPrintSudoku
+							call far ptr mPrintNewLine											
+							call mSolveSudoku						
+						pop ans
+					pop testnum
+					pop unAssignedCol
+					pop unAssignedRow						
+						
 					mov bx, ans               	; storing the ans for further reference            
-					mov ah, msg_true
-					cmp ah, bl                	; $ is stored in bh and msg is stored in bl            								
-					je returnTrue
-					
-					;You come here on backtracking
-					;Update unassigned square to -1 of current position in unAssignedRow and unAssignedCol
-					cmp unAssignedCol, 0
-					je decRow
-					dec unAssignedCol
-					jmp sqUpdated
-					decRow:
-						cmp unAssignedRow, 0
-						je myerror
-						dec unAssignedRow
-						mov unAssignedCol, 8
-					sqUpdated:
-						push_all
-							;lea si, opBoard						
-							;mov ax, 10
-							;mul unAssignedRow
-							;add ax, unAssignedCol
-							;add si, ax
-							;mov ax, [si]
-							;mov testnum, ax
-						pop_all
+					cmp dh, bl                	; $ is stored in bh and msg is stored in bl            								
+					je returnTrue							
 						
 					; unplace the number
 					push unAssignedRow
@@ -187,24 +169,22 @@ procedures segment
 															
 				noDontPlaceIt:
 			
-				;dec cx
-				;cmp cx, 0
 				cmp testnum, 39H
 				je returnFalse
 			jmp again
 				
 			returnTrue:
-				; store msg_true at location [bp + 20] which will be returned	
+				; store msg_true at location [bp + 18] which will be returned	
 				lea si, msg_true			
 				jmp done
 				
 			returnFalse:
-				; store msg_false at location [bp + 20] which will be returned	
+				; store msg_false at location [bp + 18] which will be returned	
 				lea si, msg_false										
 			
 			done:
-				mov ax, [si]
-				mov [bp + 20], ax			
+				mov cx, [si]
+				mov [bp + 18], cx
 
 			pop_all						; calling pop macro			
 			ret
@@ -490,14 +470,24 @@ procedures segment
 				mov bp, sp
 				mov [bp + 20], bl	;pushes col
 				mov [bp + 18], bh	;pushes row
-				;push bl			;pushes col
-				;push bh			;pushes row
 
 			sqNotFound:
 			
 			pop_all						; calling pop macro			
 			ret					
 		mFindUnAssignedSq endp
+	
+		
+		mSolveSudokuMain proc far			
+			push ans
+				call mSolveSudoku			
+			pop ans
+			call mPrintAns
+			call mPrintNewLine
+			call mPrintSudoku				
+			ret			
+		mSolveSudokuMain endp
+	
 	
 		exit proc far	
 			mov ah, 4CH
@@ -517,14 +507,10 @@ code segment
 		mov ss, ax
 		lea sp, tos
 												
-		;call far ptr mFindUnAssignedSq
-		call far ptr mSolveSudoku
-		call far ptr mPrintAns
-		call far ptr mPrintNewLine
-		call far ptr mPrintSudoku		
-		
-		call far ptr exit		
-			
+
+		call far ptr mSolveSudokuMain
+				
+		call far ptr exit					
 	
 code ends
-	end start	
+	end start
